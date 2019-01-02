@@ -7,6 +7,7 @@ import ast
 from graphviz import Digraph
 
 class Server(asyncore.dispatcher):
+
     def __init__(self, address):
         asyncore.dispatcher.__init__(self)
         self.logger = logging.getLogger('Server')
@@ -25,7 +26,7 @@ class Server(asyncore.dispatcher):
             ServerHandler(client_info[0], client_info[1])
 
 class ServerHandler(asyncore.dispatcher):
-
+    f = Digraph()  # type: Digraph
     def __init__(self, sock, address):
         asyncore.dispatcher.__init__(self, sock)
         self.logger = logging.getLogger('Client ' + str(address))
@@ -44,18 +45,15 @@ class ServerHandler(asyncore.dispatcher):
 
     def display_graph(self,command):
         try:
-            f = Digraph()
-            f.attr(rankdir='LR', size='8,5')
+            self.f.attr(rankdir='LR', size='8,5')
             v = list(ast.literal_eval(command))
             if len(v)>1:
                 if type(v[0]) == tuple:
-                    print "tuple "+command
-                    f.edges(list(ast.literal_eval(command)))
+                    self.f.edges(list(ast.literal_eval(command)))
                 elif type(v[0]) == str:
                     v=command.replace("(","").replace(")","").replace("\"","").split(",")
-                    print v[0]
-                    f.edge(v[0],v[1])
-            f.view("/tmp/tmp.gv")
+                    self.f.edge(v[0],v[1])
+            self.f.view("/tmp/tmp.gv")
         except Exception , e:
             self.logger.debug("Error: %s -> >>>%s<<<",str(e), command)
 
@@ -72,6 +70,8 @@ class ServerHandler(asyncore.dispatcher):
             res = tmp.replace("edge","").lstrip().replace(" ","")
             if len(res) > 1:
                 self.display_graph(res)
+        elif "clear" in tmp:
+            self.f = Digraph()
         else:
             self.logger.debug('received unknown command [%s]', tmp)
             self.data_to_write.insert(0, "Unknown Command [{}]\n".format(tmp))
